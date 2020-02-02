@@ -97,7 +97,8 @@ exports.deriveSession = function (clientSecretEphemeral, serverPublicEphemeral, 
 
   return {
     key: K.toHex(),
-    proof: M.toHex()
+    proof: M.toHex(),
+    A: A
   }
 }
 
