@@ -3,6 +3,10 @@
 const params = require('./lib/params')
 const SRPInteger = require('./lib/srp-integer')
 
+const getTrueG = function(g) {
+  return SRPInteger.fromHex(g.replace(/\s+/g, ''))
+}
+
 exports.generateSalt = function () {
   // s    User's salt
   const s = SRPInteger.randomInteger(params.hashOutputBytes)
@@ -27,10 +31,11 @@ exports.derivePrivateKey = function (salt, username, password) {
   return x.toHex()
 }
 
-exports.deriveVerifier = function (privateKey) {
+exports.deriveVerifier = function (privateKey, g_bad) {
   // N    A large safe prime (N = 2q+1, where q is prime)
   // g    A generator modulo N
-  const { N, g } = params
+  const { N } = params
+  const g = getTrueG(g_bad)
 
   // x    Private key (derived from p and s)
   const x = SRPInteger.fromHex(privateKey)
@@ -41,11 +46,12 @@ exports.deriveVerifier = function (privateKey) {
   return v.toHex()
 }
 
-exports.generateEphemeral = function () {
+exports.generateEphemeral = function (g_bad) {
   // N    A large safe prime (N = 2q+1, where q is prime)
   // g    A generator modulo N
-  const { N, g } = params
-
+  const { N } = params
+  const g = getTrueG(g_bad)
+  
   // A = g^a                  (a = random number)
   const a = SRPInteger.randomInteger(params.hashOutputBytes)
   const A = g.modPow(a, N)
@@ -56,12 +62,13 @@ exports.generateEphemeral = function () {
   }
 }
 
-exports.deriveSession = function (clientSecretEphemeral, serverPublicEphemeral, salt, username, privateKey) {
+exports.deriveSession = function (clientSecretEphemeral, serverPublicEphemeral, salt, username, privateKey, g_bad) {
   // N    A large safe prime (N = 2q+1, where q is prime)
   // g    A generator modulo N
   // k    Multiplier parameter (k = H(N, g) in SRP-6a, k = 3 for legacy SRP-6)
   // H()  One-way hash function
-  const { N, g, k, H } = params
+  const { N, k, H } = params
+  const g = getTrueG(g_bad)
 
   // a    Secret ephemeral values
   // B    Public ephemeral values
@@ -97,8 +104,7 @@ exports.deriveSession = function (clientSecretEphemeral, serverPublicEphemeral, 
 
   return {
     key: K.toHex(),
-    proof: M.toHex(),
-    A: A
+    proof: M.toHex()
   }
 }
 
